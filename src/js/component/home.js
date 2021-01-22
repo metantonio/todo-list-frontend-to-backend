@@ -1,64 +1,58 @@
 import React, { useEffect, useState } from "react";
+//la siguiente línea debe ir en el sevidor back-end 
+//import flask_corse import CORS //pipenv install flask-CORS
+
+//Se tomó el ejercicio de https://github.com/maruchf para el front-end
 
 //component
 function Home() {
-	const BASE_URL = "https://assets.breatheco.de/apis/fake/todos/user/maruchf";
+	const BASE_URL =
+		"https://3245-c181d190-54dc-4dba-a45a-442802d9cead.ws-us03.gitpod.io"; //debo abrir el servidor y puertos indicados en gitpod
 	const [tarea, guardarTarea] = useState("");
 	const [lista, guardarLista] = useState([]);
 	//crear una función para eliminar ítems del arreglo desde un botón
 	const eliminaItems = async (indexItem, listaActual) => {
-		//filtra la lista con todos los elementos menos el actual
-		const listFilter = listaActual.filter(
-			(todo, index) => index !== indexItem
-		);
-		//valida que no se está eliminando el último elemento de la lista y realiza
-		//una actualización de los elementos en la API con lo que está en listFilter
-		if (listFilter.length > 0) {
-			let response = await fetch(BASE_URL, {
-				method: "PUT",
-				body: JSON.stringify(listFilter), //Envía listFilter en .JSON
-				headers: {
-					"Content-Type": "application/json"
-				}
-			});
-			if (response.ok) {
-				guardarLista(listFilter); //cambia el estado si la respuesta de la API serv es ok, actualiza la lista
-			} else {
-				alert("hubo un problema"); //si la respuesta fue no ok, informa del problema en un alert
+		let response = await fetch(`${BASE_URL}/todos`, {
+			method: "DELETE",
+			headers: {
+				"Content-Type": "application/json"
 			}
-		} else {
-			//si es el último elemento de la lista entonces borra todo (duda: incluso el usuario?)
-			let response = await fetch(BASE_URL, {
-				method: "DELETE",
-				headers: {
-					"Content-Type": "application/json"
-				}
-			});
-			if (response.ok) {
-				guardarLista([]); //si la respuesta anterior es ok, coloca la lista como un arreglo vacío.
-			} else {
-				alert("Problema de nuevo"); //sino informa un problema
-			}
+		});
+		await obtenerTareas();
+	};
+	const obtenerTareas = async () => {
+		try {
+			let response = await fetch(`${BASE_URL}/todos`);
+			let APILista = await response.json();
+			guardarLista(APILista);
+		} catch (error) {
+			console.log(error);
 		}
 	};
-
 	useEffect(() => {
-		const obtenerTareas = async path => {
-			try {
-				let response = await fetch(path);
-				let APILista = await response.json();
-				guardarLista(APILista);
-			} catch (error) {
-				console.log(error);
-			}
-		};
-		let url = `${BASE_URL}`;
-		obtenerTareas(url);
+		obtenerTareas(`${BASE_URL}/todos`);
 		// fetch(url)
 		// 	.then(response => response.json())
 		// 	.then(APILista => guardarLista(APILista))
 		// 	.catch(error => console.log(`{error}`));
 	}, []);
+	const agregarTarea = async () => {
+		let body = {
+			label: tarea,
+			done: false
+		};
+		let response = await fetch(`${BASE_URL}/todos`, {
+			method: "POST",
+			body: JSON.stringify(body),
+			headers: { "Content-Type": "application-json" }
+		});
+		if (response.ok) {
+			guardarTarea("");
+			await obtenerTareas();
+		} else {
+			console.log(response.status);
+		}
+	};
 
 	return (
 		<div className="container-fluid col-8">
@@ -67,32 +61,8 @@ function Home() {
 				<input
 					value={tarea}
 					onKeyDown={async e => {
-						if (e.keyCode == 13) {
-							let nuevaLista = [];
-							for (let i = 0; i < lista.length; i++) {
-								nuevaLista.push(lista[i]);
-							}
-
-							nuevaLista.push({
-								label: tarea,
-								done: false
-							});
-
-							let response = await fetch(BASE_URL, {
-								method: "PUT",
-								body: JSON.stringify(nuevaLista),
-								headers: {
-									"Content-Type": "application/json"
-								}
-							});
-							if (response.ok) {
-								let response = await fetch(BASE_URL);
-								let APILista = await response.json();
-								guardarLista(APILista);
-								guardarTarea("");
-							} else {
-								alert("intenta de nuevo, tienes un error");
-							}
+						if (e.key == "Enter") {
+							await agregarTarea();
 						}
 					}}
 					onChange={e => {
